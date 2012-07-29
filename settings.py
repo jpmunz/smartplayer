@@ -2,6 +2,8 @@ DEBUG = False
 
 WRAPPER = 'ItunesWrapper'
 
+DB_FILE = '.tracks'
+
 ACCEPTED_RATING_THRESHOLD = 100
 
 EXCLUDE_STRING = 'exclude' # searched for in the 'Comments' field

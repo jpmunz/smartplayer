@@ -9,8 +9,6 @@ import wrappers
 
 from utils import MultiThreadObject
 
-DB_FILE = '.tracks'
-
 class TrackDB(dict):
 
     def __init__(self, db_file):
@@ -42,6 +40,7 @@ class SmartPlayer(MultiThreadObject):
         'p': 'toggle_pause',
         'u': 'up_vote',
         'd': 'down_vote',
+        's': 'skip',
     }
 
     def __init__(self, db_file, wrapped_player):
@@ -151,8 +150,9 @@ class SmartPlayer(MultiThreadObject):
                print 'promoting track to accepted'
 
 
-    def play(self, direction):
-        self.check_for_vote(stopped_playing=True)
+    def play(self, direction, skip=False):
+        if not skip:
+            self.check_for_vote(stopped_playing=True)
 
         if direction == self.BACK:
             if self.playlist_position <= 0:
@@ -170,7 +170,7 @@ class SmartPlayer(MultiThreadObject):
                 if random.random() <= settings.UNDECIDED_PLAY_RATE:
                     tracks = self.undecided
                     if settings.DEBUG:
-                        'picking an undecided track'
+                        print "Undecided track"
                 else:
                     tracks = self.accepted
 
@@ -178,6 +178,9 @@ class SmartPlayer(MultiThreadObject):
                 self.playlist.append(next_track)
 
         self.current_track = self.playlist[self.playlist_position]
+
+    def skip(self):
+        self.play(self.NEXT, skip=True)
 
     def next(self):
         self.play(self.NEXT)
@@ -222,5 +225,5 @@ if __name__ == '__main__':
 
     print "Loading..."
     with wrapper_cls() as wrapped_player:
-        player = SmartPlayer(DB_FILE, wrapped_player)
+        player = SmartPlayer(settings.DB_FILE, wrapped_player)
         player.start()
