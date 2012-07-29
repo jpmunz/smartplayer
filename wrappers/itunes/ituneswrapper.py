@@ -1,7 +1,7 @@
 import time
 from win32com import client
 
-from smartplayer.wrappers.base import Track
+from wrappers.base import Track
 
 class ItunesTrack(Track):
 

@@ -32,8 +32,13 @@ class SmartPlayer(MultiThreadObject):
     UP_VOTE = 1
     DOWN_VOTE = 0
 
+    BACK = 0
+    NEXT = 1
+
     COMMANDS = {
         '': 'next',
+        'n': 'next',
+        'b': 'back',
         'p': 'toggle_pause',
     }
 
@@ -43,10 +48,12 @@ class SmartPlayer(MultiThreadObject):
         self.db_file = db_file
         self.wrapped_player = wrapped_player
         self.track_db = TrackDB(db_file)
-        self.current_track = None
+        self._current_track = None
         self.voted_on_current_track = False
         self.accepted = {}
         self.undecided = {}
+        self.playlist = []
+        self.playlist_position = -1
 
         for track in wrapped_player.tracks:
             if track.excluded:
@@ -132,23 +139,40 @@ class SmartPlayer(MultiThreadObject):
            if settings.DEBUG:
                print 'promoting track to accepted'
 
-    def next(self):
+
+    def play(self, direction):
         self.check_for_vote(stopped_playing=True)
 
-        # Decide if we are playing new music or not
-        if random.random() <= settings.UNDECIDED_PLAY_RATE:
-            tracks = self.undecided
-            if settings.DEBUG:
-                'picking an undecided track'
+        if direction == self.BACK:
+            if self.playlist_position <= 0:
+                return
+
+            self.playlist_position -= 1
+
         else:
-            tracks = self.accepted
 
-        # Play random track
-        self.current_track = tracks[random.choice(tracks.keys())]
+            self.playlist_position += 1
 
-        self.wrapped_player.play(self.current_track)
+            if self.playlist_position == len(self.playlist):
 
-        print "Now Playing: %s" % self.current_track
+                # Decide if we are playing new music or not
+                if random.random() <= settings.UNDECIDED_PLAY_RATE:
+                    tracks = self.undecided
+                    if settings.DEBUG:
+                        'picking an undecided track'
+                else:
+                    tracks = self.accepted
+
+                next_track = tracks[random.choice(tracks.keys())]
+                self.playlist.append(next_track)
+
+        self.current_track = self.playlist[self.playlist_position]
+
+    def next(self):
+        self.play(self.NEXT)
+
+    def back(self):
+        self.play(self.BACK)
 
     def toggle_pause(self):
         self.wrapped_player.toggle_pause()
@@ -166,6 +190,8 @@ class SmartPlayer(MultiThreadObject):
     def set_current_track(self, track):
         self.voted_on_current_track = False
         self._current_track = track
+        self.wrapped_player.play(track)
+        print "Now Playing: %s" % track
 
     def get_current_track(self):
         return self._current_track

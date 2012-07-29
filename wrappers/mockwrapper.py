@@ -1,5 +1,5 @@
 from mock import Mock
-from smartplayer.wrappers.base import Track
+from wrappers.base import Track
 
 class MockTrack(Track):
     def __init__(self, name, artist, rating, comments, duration=60):
