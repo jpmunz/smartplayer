@@ -1,5 +1,5 @@
 from mock import Mock
-from wrappers.base import Track
+from base import Track
 
 class MockTrack(Track):
     def __init__(self, name, artist, rating, comments, duration=60):

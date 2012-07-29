@@ -1,7 +1,7 @@
 import time
 from win32com import client
 
-from wrappers.base import Track
+from ..base import Track
 
 class ItunesTrack(Track):
 
