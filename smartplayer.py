@@ -40,6 +40,8 @@ class SmartPlayer(MultiThreadObject):
         'n': 'next',
         'b': 'back',
         'p': 'toggle_pause',
+        'u': 'up_vote',
+        'd': 'down_vote',
     }
 
     def __init__(self, db_file, wrapped_player):
@@ -50,6 +52,7 @@ class SmartPlayer(MultiThreadObject):
         self.track_db = TrackDB(db_file)
         self._current_track = None
         self.voted_on_current_track = False
+        self.paused = False
         self.accepted = {}
         self.undecided = {}
         self.playlist = []
@@ -96,9 +99,14 @@ class SmartPlayer(MultiThreadObject):
 
         # Decide if we should vote on the song yet
         if current >= time_for_up_vote or percentage >= amount_for_up_vote:
-            self.vote(self.current_track, self.UP_VOTE)
+            self.up_vote()
         elif stopped_playing and (current >= time_for_down_vote or percentage >= amount_for_down_vote):
-            self.vote(self.current_track, self.DOWN_VOTE)
+            self.down_vote()
+
+    def up_vote(self):
+        self.vote(self.current_track, self.UP_VOTE)
+    def down_vote(self):
+        self.vote(self.current_track, self.DOWN_VOTE)
 
     def vote(self, track, kind):
         '''
@@ -123,6 +131,9 @@ class SmartPlayer(MultiThreadObject):
         track_db_entry = self.track_db[track.key]
         track_db_entry['rating'] += accepted_change if track.key in self.accepted else undecided_change
         self.track_db.save()
+
+        if settings.DEBUG:
+            print "rating: %d" % int(track_db_entry['rating'])
 
         # Move the track if it has crossed the threshold for being Accepted
         if track_db_entry['rating'] < settings.ACCEPTED_RATING_THRESHOLD and track.key in self.accepted:
@@ -175,6 +186,7 @@ class SmartPlayer(MultiThreadObject):
         self.play(self.BACK)
 
     def toggle_pause(self):
+        self.paused = True
         self.wrapped_player.toggle_pause()
 
     def stop(self):
@@ -184,7 +196,9 @@ class SmartPlayer(MultiThreadObject):
     def tick(self):
         self.check_for_vote()
 
-        if self.wrapped_player.stopped:
+        # Need to distinguish between pausing the the underlying player
+        # and a user pausing the script
+        if not self.paused and self.wrapped_player.stopped:
             self.next()
 
     def set_current_track(self, track):
