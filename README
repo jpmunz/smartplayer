@@ -1,0 +1,16 @@
+A wrapper around music players to give more control over track selection.
+
+The player divides your library into 2 categories 'Accepted' and 'Undecided' tracks based on a threshold defined in the settings. The next track is selected from one of these sets based on a configurable rate.
+
+In addition track ratings stored in a separate database and automated automatically based on certain thresholds. Up votes are given to tracks whenever they are played to completion or near enough. Down votes are given when tracks are skipped near the beginning. No votes are given if a track is immediately skipped.
+
+python smartplayer.py
+
+Controls:
+'' or 'n' ==> next track
+'b' ==> previous track
+'q' ==> quit
+
+A reporting tool report.py is available for dumping some stat from the track DB. The DB is stored as a JSON string containing track information.
+
+Currently the only supported player is iTunes for windows. The win32com library (or maybe just the interface to iTunes) was pretty finnicky and caused hoop jumping in the code. The biggest consequence in terms of usage is the need to 'uncheck' all tracks in iTunes before running it, this will prevent iTunes from automatically switching to the next track after one finishes.
