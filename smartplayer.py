@@ -34,7 +34,7 @@ class SmartPlayer(MultiThreadObject):
     NEXT = 1
 
     COMMANDS = {
-        '': 'next',
+        '': 'toggle_play',
         'n': 'next',
         'b': 'back',
         'p': 'toggle_pause',
@@ -54,6 +54,7 @@ class SmartPlayer(MultiThreadObject):
         self.paused = False
         self.accepted = {}
         self.undecided = {}
+        self.dislike = {}
         self.playlist = []
         self.playlist_position = -1
 
@@ -68,8 +69,10 @@ class SmartPlayer(MultiThreadObject):
             # Split tracks between accepted and undecided
             if track.normalized_rating >= settings.ACCEPTED_RATING_THRESHOLD:
                 self.accepted[track.key] = track
-            else:
+            elif track.normalized_rating >= settings.DISLIKE_THRESHOLD:
                 self.undecided[track.key] = track
+            else:
+                self.dislike[track.key] = track
 
         self.track_db.save()
 
@@ -151,6 +154,8 @@ class SmartPlayer(MultiThreadObject):
 
 
     def play(self, direction, skip=False):
+        self.paused = False
+
         if not skip:
             self.check_for_vote(stopped_playing=True)
 
@@ -169,8 +174,6 @@ class SmartPlayer(MultiThreadObject):
                 # Decide if we are playing new music or not
                 if random.random() <= settings.UNDECIDED_PLAY_RATE:
                     tracks = self.undecided
-                    if settings.DEBUG:
-                        print "Undecided track"
                 else:
                     tracks = self.accepted
 
@@ -178,6 +181,9 @@ class SmartPlayer(MultiThreadObject):
                 self.playlist.append(next_track)
 
         self.current_track = self.playlist[self.playlist_position]
+
+        if settings.DEBUG:
+            print "rating: %d" % self.track_db[self.current_track.key]['rating']
 
     def skip(self):
         self.play(self.NEXT, skip=True)
@@ -188,8 +194,14 @@ class SmartPlayer(MultiThreadObject):
     def back(self):
         self.play(self.BACK)
 
+    def toggle_play(self):
+        if self.paused:
+            self.toggle_pause()
+        else:
+            self.next()
+
     def toggle_pause(self):
-        self.paused = True
+        self.paused = not self.paused
         self.wrapped_player.toggle_pause()
 
     def stop(self):

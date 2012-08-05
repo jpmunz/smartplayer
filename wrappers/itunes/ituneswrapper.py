@@ -48,11 +48,19 @@ class ItunesWrapper(object):
         return self.itunes.PlayerState == self.STOPPED_STATE
 
     def play(self, track):
-        try:
-            track.wrapped_track.Play()
-        except Exception, e:
-            print "Failed on trying to play %s, error:%s" % (track.name, e)
-            raise
+
+        attempts = 0
+        while True:
+            try:
+                track.wrapped_track.Play()
+                break
+            except Exception, e:
+                print "Failed on trying to play %s, error:%s" % (track.name, e)
+
+                attempts += 1
+                time.sleep(1)
+                if attempts >= 3:
+                    raise
 
     def toggle_pause(self):
         self.itunes.PlayPause()

@@ -1,3 +1,4 @@
+import random
 from threading import Timer, Event, Thread
 
 class MultiThreadObject(object):
@@ -74,3 +75,29 @@ class MultiThreadObject(object):
     def tick(self):
         raise NotImplemented()
 
+def random_weighted_choice(seq, weight_func):
+    n = len(seq)
+    added_weights = 0
+    weights = []
+
+    for item in seq:
+        extra_weight = weight_func(item)
+        added_weights += extra_weight
+        weights.append(1 + (extra_weight + (extra_weight/float(n - 1))))
+
+    for w in range(n):
+        weights[w] -= (added_weights/float(n - 1))
+        weights[w] = max(weights[w], 0)
+
+    pick = random.random() * n
+
+    start = 0
+    for w in range(n):
+        end = start + weights[w]
+
+        if start <= pick and pick <= end:
+            break
+
+        start = end
+
+    return w
