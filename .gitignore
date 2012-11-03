@@ -4,3 +4,4 @@ localsettings.py
 *.sw*
 *.pyc
 *.pyo
+report.bat
