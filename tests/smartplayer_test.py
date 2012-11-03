@@ -75,6 +75,7 @@ class TestSmartPlayer(unittest.TestCase):
         settings.THRESHOLD_FOR_UP_VOTE = (60, .8)
 
         settings.ACCEPTED_RATING_THRESHOLD = 100
+        settings.DISLIKE_THRESHOLD = -50
 
         # Skipped too quickly for down vote 
         self.voting_scenario(player, position=5, stopped=True, expected_rating=110, expected_type='accepted')
@@ -97,6 +98,13 @@ class TestSmartPlayer(unittest.TestCase):
         settings.UP_VOTE_FOR_ACCEPTED = 5
         self.voting_scenario(player, position=80, expected_rating=110, expected_type='accepted')
 
+        # Put on dislike list if down voted too much
+        settings.DOWN_VOTE_FOR_ACCEPTED = 50
+        settings.DOWN_VOTE_FOR_UNDECIDED = 120
+        self.voting_scenario(player, position=20, stopped=True, expected_rating=60, expected_type='undecided')
+        self.voting_scenario(player, position=20, stopped=True, expected_rating=-60, expected_type='dislike')
+
+
     def voting_scenario(self, player, reset_vote=True, stopped=False, position=None, expected_rating=None, expected_type=None):
         player.wrapped_player._position = position
 
@@ -109,9 +117,15 @@ class TestSmartPlayer(unittest.TestCase):
         if expected_type == 'accepted':
             self.assertTrue(player.current_track.key in player.accepted)
             self.assertFalse(player.current_track.key in player.undecided)
-        else:
+            self.assertFalse(player.current_track.key in player.dislike)
+        elif expected_type == 'undecided':
             self.assertTrue(player.current_track.key in player.undecided)
             self.assertFalse(player.current_track.key in player.accepted)
+            self.assertFalse(player.current_track.key in player.dislike)
+        else:
+            self.assertTrue(player.current_track.key in player.dislike)
+            self.assertFalse(player.current_track.key in player.accepted)
+            self.assertFalse(player.current_track.key in player.undecided)
 
     def test_next_song(self):
         accepted_track = MockTrack("F", "foo", 110, "shuffle")

@@ -3,11 +3,19 @@ from __future__ import with_statement
 import json
 import random
 import os
-
+import argparse
 import settings
 import wrappers
 
 from utils import MultiThreadObject
+
+
+def debug(msg):
+    log(msg, debug_only=True)
+
+def log(msg, debug_only=False):
+    if not debug_only or settings.DEBUG:
+        print msg
 
 class TrackDB(dict):
 
@@ -20,6 +28,10 @@ class TrackDB(dict):
 
                 if db_data:
                     self.update(json.loads(db_data))
+
+            # Write a backup file in case something goes wrong
+            with open(self.db_file + '~', 'w+') as f:
+                f.write(json.dumps(self))
 
     def save(self):
         with open(self.db_file, 'w+') as f:
@@ -43,7 +55,7 @@ class SmartPlayer(MultiThreadObject):
         's': 'skip',
     }
 
-    def __init__(self, db_file, wrapped_player):
+    def __init__(self, db_file, wrapped_player, clean_db=False):
         super(SmartPlayer, self).__init__()
 
         self.db_file = db_file
@@ -58,9 +70,13 @@ class SmartPlayer(MultiThreadObject):
         self.playlist = []
         self.playlist_position = -1
 
+        current_track_keys = set([])
+
         for track in wrapped_player.tracks:
             if track.excluded:
                 continue
+
+            current_track_keys.add(track.key)
 
             # This is a track we haven't seen before, load it into the db
             if not track.key in self.track_db:
@@ -73,6 +89,12 @@ class SmartPlayer(MultiThreadObject):
                 self.undecided[track.key] = track
             else:
                 self.dislike[track.key] = track
+
+        if clean_db:
+            old_keys = [db_key for db_key in self.track_db.keys() if db_key not in current_track_keys]
+
+            for key in old_keys:
+                self.track_db.pop(key)
 
         self.track_db.save()
 
@@ -122,36 +144,33 @@ class SmartPlayer(MultiThreadObject):
         # Get correct increment for the vote
         if kind == self.UP_VOTE:
             accepted_change, undecided_change = settings.UP_VOTE_FOR_ACCEPTED, settings.UP_VOTE_FOR_UNDECIDED
-            if settings.DEBUG:
-                print 'up voting'
+            debug('up voting')
         else:
             accepted_change, undecided_change = settings.DOWN_VOTE_FOR_ACCEPTED * -1, settings.DOWN_VOTE_FOR_UNDECIDED * -1
-            if settings.DEBUG:
-                print 'down voting'
+            debug('down voting')
 
         # Update the tracks rating and save to the DB
         track_db_entry = self.track_db[track.key]
         track_db_entry['rating'] += accepted_change if track.key in self.accepted else undecided_change
         self.track_db.save()
-
-        if settings.DEBUG:
-            print "rating: %d" % int(track_db_entry['rating'])
+        debug("rating: %d" % int(track_db_entry['rating']))
 
         # Move the track if it has crossed the threshold for being Accepted
-        if track_db_entry['rating'] < settings.ACCEPTED_RATING_THRESHOLD and track.key in self.accepted:
-           self.accepted.pop(track.key)
-           self.undecided[track.key] = track
+        if track_db_entry['rating'] < settings.ACCEPTED_RATING_THRESHOLD:
+           if track.key in self.accepted:
+               self.accepted.pop(track.key)
+               self.undecided[track.key] = track
+               debug('demoting track to undecided')
 
-           if settings.DEBUG:
-               print 'demoting track to undecided'
+           if track_db_entry['rating'] < settings.DISLIKE_THRESHOLD and track.key in self.undecided:
+               self.undecided.pop(track.key)
+               self.dislike[track.key] = track
+               debug('demoting track to disliked')
 
         elif track_db_entry['rating'] >= settings.ACCEPTED_RATING_THRESHOLD and track.key in self.undecided:
            self.undecided.pop(track.key)
            self.accepted[track.key] = track
-
-           if settings.DEBUG:
-               print 'promoting track to accepted'
-
+           debug('promoting track to accepted')
 
     def play(self, direction, skip=False):
         self.paused = False
@@ -181,9 +200,7 @@ class SmartPlayer(MultiThreadObject):
                 self.playlist.append(next_track)
 
         self.current_track = self.playlist[self.playlist_position]
-
-        if settings.DEBUG:
-            print "rating: %d" % self.track_db[self.current_track.key]['rating']
+        debug("rating: %d" % self.track_db[self.current_track.key]['rating'])
 
     def skip(self):
         self.play(self.NEXT, skip=True)
@@ -205,7 +222,7 @@ class SmartPlayer(MultiThreadObject):
         self.wrapped_player.toggle_pause()
 
     def stop(self):
-        print "Closing..."
+        log("Closing...")
         self.wrapped_player.close()
 
     def tick(self):
@@ -220,7 +237,7 @@ class SmartPlayer(MultiThreadObject):
         self.voted_on_current_track = False
         self._current_track = track
         self.wrapped_player.play(track)
-        print "Now Playing: %s" % track
+        log("Now Playing: %s" % track)
 
     def get_current_track(self):
         return self._current_track
@@ -229,13 +246,17 @@ class SmartPlayer(MultiThreadObject):
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser(description='Wraps an existing music player with additional rating controls')
+    parser.add_argument('--clean-db', action='store_true', default=False, help="Removes any tracks in the DB not found in the current playlist")
+    args = parser.parse_args()
+
     wrapper_cls = getattr(wrappers, settings.WRAPPER, None)
 
     if not wrapper_cls:
-        print "Wrapper not found: %s" % settings.WRAPPER
+        log("Wrapper not found: %s" % settings.WRAPPER)
         exit()
 
-    print "Loading..."
+    log("Loading...")
     with wrapper_cls() as wrapped_player:
-        player = SmartPlayer(settings.DB_FILE, wrapped_player)
+        player = SmartPlayer(settings.DB_FILE, wrapped_player, clean_db=args.clean_db)
         player.start()
