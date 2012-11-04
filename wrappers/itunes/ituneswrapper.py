@@ -32,6 +32,8 @@ class ItunesWrapper(object):
 
     STOPPED_STATE = 0
 
+    SEARCH_ALL_FIELDS = 0
+
     def __init__(self):
         self.itunes = client.Dispatch('iTunes.Application')
 
@@ -48,7 +50,6 @@ class ItunesWrapper(object):
         return self.itunes.PlayerState == self.STOPPED_STATE
 
     def play(self, track):
-
         attempts = 0
         while True:
             try:
@@ -64,6 +65,10 @@ class ItunesWrapper(object):
 
     def toggle_pause(self):
         self.itunes.PlayPause()
+
+    def search(self, search_text):
+        search_results = self.itunes.LibraryPlaylist.Search(search_text, self.SEARCH_ALL_FIELDS)
+        return [ItunesTrack(track) for track in search_results]
 
     def close(self):
         # What's happening here is that Quit() doesn't reliably close

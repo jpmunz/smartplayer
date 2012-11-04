@@ -25,6 +25,7 @@ class MultiThreadObject(object):
     def __init__(self):
         self.main_thread_event = Event()
         self.main_thread_command = None
+        self.main_thread_args = []
         self.stopped = False
 
     def start(self):
@@ -41,7 +42,7 @@ class MultiThreadObject(object):
 
         while True:
             self.main_thread_event.wait()
-            self.main_thread_command()
+            self.main_thread_command(*self.main_thread_args)
             self.main_thread_event.clear()
 
             if self.stopped:
@@ -56,17 +57,32 @@ class MultiThreadObject(object):
 
     def check_for_input(self):
         while True:
-            command = raw_input(self.PROMPT)
+            user_input = raw_input(self.PROMPT)
 
-            if command == self.STOP_COMMAND:
-                self.execute_on_main_thread(self.__stop__)
-                break
-            elif command in self.COMMANDS:
-                fn = getattr(self, self.COMMANDS[command])
-                self.execute_on_main_thread(fn)
+            try:
+                args = [int(user_input)]
+                fn = getattr(self, self.DIGIT_COMMAND)
+            except ValueError:
+                if ' ' in user_input:
+                    command = user_input[:user_input.index(' ')]
+                    # Just take everything passed the first space as a single arg
+                    # should add better parsing for multiple args
+                    args = [user_input[user_input.index(' ') + 1:]]
+                else:
+                    command = user_input
+                    args = None
 
-    def execute_on_main_thread(self, call):
+                if command == self.STOP_COMMAND:
+                    self.execute_on_main_thread(self.__stop__)
+                    break
+                elif command in self.COMMANDS:
+                    fn = getattr(self, self.COMMANDS[command])
+
+            self.execute_on_main_thread(fn, args)
+
+    def execute_on_main_thread(self, call, args=None):
         self.main_thread_command = call
+        self.main_thread_args = args or []
         self.main_thread_event.set()
 
     def __tick__(self):

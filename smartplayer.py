@@ -53,7 +53,10 @@ class SmartPlayer(MultiThreadObject):
         'u': 'up_vote',
         'd': 'down_vote',
         's': 'skip',
+        'f': 'search',
     }
+
+    DIGIT_COMMAND = 'play_search_result'
 
     def __init__(self, db_file, wrapped_player, clean_db=False):
         super(SmartPlayer, self).__init__()
@@ -69,6 +72,7 @@ class SmartPlayer(MultiThreadObject):
         self.dislike = {}
         self.playlist = []
         self.playlist_position = -1
+        self.search_results = []
 
         current_track_keys = set([])
 
@@ -202,6 +206,10 @@ class SmartPlayer(MultiThreadObject):
         self.current_track = self.playlist[self.playlist_position]
         debug("rating: %d" % self.track_db[self.current_track.key]['rating'])
 
+    def play_track(self, track):
+        self.playlist.append(track)
+        self.skip()
+
     def skip(self):
         self.play(self.NEXT, skip=True)
 
@@ -220,6 +228,18 @@ class SmartPlayer(MultiThreadObject):
     def toggle_pause(self):
         self.paused = not self.paused
         self.wrapped_player.toggle_pause()
+
+    def search(self, search_text):
+        if search_text:
+            self.search_results = self.wrapped_player.search(search_text)
+            for i, track in enumerate(self.search_results):
+                log("%d. %s" % (i + 1, track))
+
+    def play_search_result(self, number):
+        if len(self.search_results) >= number:
+            self.play_track(self.search_results[number - 1])
+        else:
+            log("Invalid search result index: %d" % number)
 
     def stop(self):
         log("Closing...")
