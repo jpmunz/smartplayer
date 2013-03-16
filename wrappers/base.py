@@ -2,28 +2,28 @@ from smartplayer import settings
 
 class Track(object):
 
-    def __init__(self, wrapped_track):
-        self.wrapped_track = wrapped_track
+    def __init__(self):
+        pass
 
     @property
     def name(self):
-        NotImplemented()
+        raise NotImplementedError
 
     @property
     def artist(self):
-        NotImplemented()
+        raise NotImplementedError
 
     @property
-    def normalized_rating(self):
-        NotImplemented()
+    def initial_rating(self):
+        raise NotImplementedError
 
     @property
     def comments(self):
-        NotImplemented()
+        raise NotImplementedError
 
     @property
     def duration(self):
-        NotImplemented()
+        raise NotImplementedError
 
     @property
     def excluded(self):
@@ -38,8 +38,41 @@ class Track(object):
         return {
             'name': self.name,
             'artist': self.artist,
-            'rating': self.normalized_rating
+            'rating': self.initial_rating
         }
 
     def __str__(self):
         return "%s by %s" % (self.name, self.artist)
+
+class PlayerWrapper(object):
+
+    def __init__(self):
+        super(PlayerWrapper, self).__init__()
+
+    @property
+    def tracks(self):
+        raise NotImplementedError
+
+    @property
+    def position(self):
+        raise NotImplementedError
+
+    @property
+    def stopped(self):
+        raise NotImplementedError
+
+    def play(self, track):
+        raise NotImplementedError
+
+    def toggle_pause(self):
+        raise NotImplementedError
+
+    def search(self, search_text):
+        raise NotImplementedError
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+        return False

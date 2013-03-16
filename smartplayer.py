@@ -87,9 +87,9 @@ class SmartPlayer(MultiThreadObject):
                 self.track_db[track.key] = track.json
 
             # Split tracks between accepted and undecided
-            if track.normalized_rating >= settings.ACCEPTED_RATING_THRESHOLD:
+            if self.track_db[track.key]['rating'] >= settings.ACCEPTED_RATING_THRESHOLD:
                 self.accepted[track.key] = track
-            elif track.normalized_rating >= settings.DISLIKE_THRESHOLD:
+            elif self.track_db[track.key]['rating'] >= settings.DISLIKE_THRESHOLD:
                 self.undecided[track.key] = track
             else:
                 self.dislike[track.key] = track
@@ -197,10 +197,14 @@ class SmartPlayer(MultiThreadObject):
                 # Decide if we are playing new music or not
                 if random.random() <= settings.UNDECIDED_PLAY_RATE:
                     tracks = self.undecided
+
+                    if not tracks:
+                        tracks = self.accepted
                 else:
                     tracks = self.accepted
 
                 next_track = tracks[random.choice(tracks.keys())]
+
                 self.playlist.append(next_track)
 
         self.current_track = self.playlist[self.playlist_position]

@@ -5,3 +5,4 @@ localsettings.py
 *.pyc
 *.pyo
 report.bat
+.id3_db

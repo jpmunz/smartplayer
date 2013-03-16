@@ -3,6 +3,7 @@ from base import Track
 
 class MockTrack(Track):
     def __init__(self, name, artist, rating, comments, duration=60):
+        super(MockTrack, self).__init__()
         self._name = name
         self._artist = artist
         self._comments = comments

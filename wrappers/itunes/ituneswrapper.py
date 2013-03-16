@@ -1,12 +1,11 @@
 import time
 from win32com import client
-
-from ..base import Track
+from ..base import Track, PlayerWrapper
 
 class ItunesTrack(Track):
 
     def __init__(self, wrapped_track):
-        super(ItunesTrack, self).__init__(wrapped_track)
+        super(ItunesTrack, self).__init__()
 
     @property
     def name(self):
@@ -17,7 +16,7 @@ class ItunesTrack(Track):
         return self.wrapped_track.Artist
 
     @property
-    def normalized_rating(self):
+    def initial_rating(self):
         return (self.wrapped_track.Rating / 60.0) * 100
 
     @property
@@ -28,13 +27,14 @@ class ItunesTrack(Track):
     def duration(self):
         return self.wrapped_track.Duration
 
-class ItunesWrapper(object):
+class ItunesWrapper(PlayerWrapper):
 
     STOPPED_STATE = 0
 
     SEARCH_ALL_FIELDS = 0
 
     def __init__(self):
+        super(ItunesWrapper, self).__init__()
         self.itunes = client.Dispatch('iTunes.Application')
 
     @property
@@ -88,10 +88,3 @@ class ItunesWrapper(object):
                 time.sleep(1)
             except Exception:
                 break
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, traceback):
-        self.close()
-        return False
