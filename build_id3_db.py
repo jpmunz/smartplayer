@@ -36,14 +36,18 @@ def generate_id3_db(path, db_file, reset):
             if any(file.lower().endswith('.' + ext) for ext in ['wma', 'm4a', 'mp3', 'mp4']):
                 music_files.append(root + '/' + file)
 
+    fails = 0
+
     for file in music_files:
+        escaped_file_name = json.loads(json.dumps(file))
+
         try:
             if not json.loads(json.dumps(file)) in db:
                 id3_info = eyed3.load(file)
                 db[file] = {
                     'artist': id3_info.tag.artist,
                     'title': id3_info.tag.title,
-                    'comments': getattr(id3_info.tag.comments.get(u''), 'text', ''),
+                    'comments': ','.join(comment.text for comment in id3_info.tag.comments),
                     'duration': id3_info.info.time_secs,
                 }
         except Exception, e:
@@ -57,8 +61,28 @@ def generate_id3_db(path, db_file, reset):
                 }
             except Exception, e:
                 print "Failed to load information for %s, error:%s" % (file, e.message)
+                fails += 1
+
+
+        if escaped_file_name in db and file in db and escaped_file_name != file:
+            print "Both escaped and unescaped in db for %s" % file
+            fails += 1
+
+        if escaped_file_name in db:
+            track = db[escaped_file_name]
+        elif file in db:
+            track = db[file]
+
+        if (track['comments'] != 'exclude') and (not track['artist'] or not track['title'] or not track['duration']):
+            print "Missing id3 tags for %s" % file
+            fails += 1
+
+
 
     db.save()
+
+    if fails:
+        print "fail count: %d" % fails
 
     return db
 

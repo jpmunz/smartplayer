@@ -46,7 +46,7 @@ class ExaileWrapper(ID3Wrapper):
     @property
     @retry(max_attempts=10)
     def stopped(self):
-        return 'status: paused' in self.media_player.Query()
+        return 'Not playing' in self.media_player.Query()
 
     @retry(max_attempts=10)
     def play(self, track):
