@@ -1,5 +1,42 @@
 import random
+import json
+import os
 from threading import Timer, Event, Thread
+
+def find_tracks_file(path):
+    path = os.path.abspath(os.path.expanduser(path))
+
+    for file_name in os.listdir(path):
+        if file_name == '.tracks':
+            return os.path.join(path, '.tracks')
+
+    parent_path = os.path.abspath(os.path.join(path, os.pardir))
+    if parent_path == path:
+        # Reach the root
+        raise Exception("No .tracks file found")
+    else:
+        return find_tracks_file(parent_path)
+
+class PersistedDict(dict):
+    def __init__(self, file_path, overwrite=False):
+        self.file_path = file_path
+        self.read_from_file(overwrite=overwrite)
+
+    def read_from_file(self, overwrite):
+        if os.path.exists(self.file_path):
+            if not overwrite:
+                with open(self.file_path, 'r') as f:
+                    data = f.read()
+                    if data:
+                        self.update(json.loads(data))
+
+            # Write a backup file in case something goes wrong
+            with open(self.file_path + '~', 'w+') as f:
+                f.write(json.dumps(self))
+
+    def save(self):
+        with open(self.file_path, 'w+') as f:
+            f.write(json.dumps(self))
 
 class MultiThreadObject(object):
     '''

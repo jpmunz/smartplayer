@@ -1,8 +1,8 @@
-from smartplayer import settings
+from .. import settings
 
 if settings.WRAPPER == 'ItunesWrapper':
-    from itunes.ituneswrapper import ItunesWrapper
+    from itunes import ItunesWrapper
 elif settings.WRAPPER == 'ExaileWrapper':
-    from exaile.exailewrapper import ExaileWrapper
+    from exaile import ExaileWrapper
 else:
     raise Exception("Unrecognized wrapper '%s'" % settings.WRAPPER)

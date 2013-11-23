@@ -1,0 +1,52 @@
+#!/usr/bin/python
+import argparse
+from tracks import update_from_path
+import reporting
+import settings
+import players
+
+def init_db(args):
+    update_from_path(args.directory, verbose=args.verbose, overwrite=args.overwrite)
+
+def report_duplicates(args):
+    reporting.report_duplicates(args.directory)
+
+def report_missing(args):
+    reporting.report_missing(args.directory, tags=args.tags.split(','))
+
+def play(args):
+    players.play(args.directory, player=args.player, accepted_threshold=args.accepted_threshold, undecided_play_rate=args.undecided_rate, verbose=args.verbose)
+
+def main():
+    parser = argparse.ArgumentParser(description="Manages and plays your music library")
+    subparsers = parser.add_subparsers()
+
+    common_parser = argparse.ArgumentParser(add_help=False)
+    common_parser.add_argument('-v', '--verbose', action='store_true')
+    common_parser.add_argument('-d', '--directory', default='.')
+
+    play_parser = subparsers.add_parser('play', help="Plays tracks in the current directory tree", parents=[common_parser])
+    play_parser.set_defaults(func=play)
+    play_parser.add_argument('player', default=settings.WRAPPER)
+    play_parser.add_argument('-a', '--accepted-threshold', help="Rating threshold to consider a track accepted", default=settings.ACCEPTED_THRESHOLD)
+    play_parser.add_argument('-u', '--undecided-rate', help="Percent of time to play undecided tracks", default=settings.UNDECIDED_PLAY_RATE)
+
+    init_parser = subparsers.add_parser('init', help="Initialize a new .tracks database in the current directory", parents=[common_parser])
+    init_parser.set_defaults(func=init_db)
+    init_parser.add_argument('-o', '--overwrite', help='Replace existing .tracks file', action='store_true')
+
+    report_parser = subparsers.add_parser('report', help="Report on the .tracks in the current directory tree", parents=[common_parser])
+    report_sub_parsers = report_parser.add_subparsers()
+
+    report_duplicates_parser = report_sub_parsers.add_parser('duplicates')
+    report_duplicates_parser.set_defaults(func=report_duplicates)
+
+    report_missing_parser = report_sub_parsers.add_parser('missing')
+    report_missing_parser.set_defaults(func=report_missing)
+    report_missing_parser.add_argument('-t', '--tags', help="Which tags to care about", default=','.join(settings.ID3_TAGS))
+
+    args = parser.parse_args()
+    args.func(args)
+
+if __name__ == '__main__':
+    main()

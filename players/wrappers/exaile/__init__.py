@@ -1,8 +1,7 @@
 import os
 import dbus
 import time
-import eyed3
-from ..id3 import ID3Track, ID3Wrapper
+from ..base import PlayerWrapper
 
 def retry(max_attempts):
     '''
@@ -18,7 +17,7 @@ def retry(max_attempts):
                 try:
                     return func(*args, **kwargs)
                     break
-                except Exception:
+                except Exception, e:
                     attempts += 1
                     if attempts >= max_attempts:
                         break
@@ -27,7 +26,7 @@ def retry(max_attempts):
         return wrapped_func
     return wrap
 
-class ExaileWrapper(ID3Wrapper):
+class ExaileWrapper(PlayerWrapper):
 
     def __init__(self):
         super(ExaileWrapper, self).__init__()
@@ -49,9 +48,9 @@ class ExaileWrapper(ID3Wrapper):
         return 'Not playing' in self.media_player.Query()
 
     @retry(max_attempts=10)
-    def play(self, track):
+    def play(self, file_path):
         self.media_player.Stop()
-        self.media_player.PlayFile(track.path)
+        self.media_player.PlayFile(file_path)
         self.media_player.StopAfterCurrent()
 
     @retry(max_attempts=10)
