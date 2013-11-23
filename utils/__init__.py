@@ -3,23 +3,10 @@ import json
 import os
 from threading import Timer, Event, Thread
 
-def find_tracks_file(path):
-    path = os.path.abspath(os.path.expanduser(path))
-
-    for file_name in os.listdir(path):
-        if file_name == '.tracks':
-            return os.path.join(path, '.tracks')
-
-    parent_path = os.path.abspath(os.path.join(path, os.pardir))
-    if parent_path == path:
-        # Reach the root
-        raise Exception("No .tracks file found")
-    else:
-        return find_tracks_file(parent_path)
-
 class PersistedDict(dict):
     def __init__(self, file_path, overwrite=False):
-        self.file_path = file_path
+        super(PersistedDict, self).__init__()
+        self.file_path = os.path.abspath(os.path.expanduser(file_path))
         self.read_from_file(overwrite=overwrite)
 
     def read_from_file(self, overwrite):
@@ -45,10 +32,10 @@ class MultiThreadObject(object):
     commands invoked by the user are executed on the thread that originally invoked start
     on the object which blocks until it has something to do.
 
-    NOTE: This is needed to deal with some bugginess I found with the win32com interface 
-    used for accessing iTunes. It seems to break whenever you try and access the 
+    NOTE: This is needed to deal with some bugginess I found with the win32com interface
+    used for accessing iTunes. It seems to break whenever you try and access the
     interface on a thread other than the one that created it. Ideally I would put the
-    workaround in the ItunesWrapper, unfortunately trying to instantiate the COM 
+    workaround in the ItunesWrapper, unfortunately trying to instantiate the COM
     object on anything OTHER than the main thread causes it to fail as well. So for the
     time being I'm forced to put the workaround here, which really shouldn't care about
     problems in the wrapper.
@@ -127,30 +114,3 @@ class MultiThreadObject(object):
 
     def tick(self):
         raise NotImplemented()
-
-def random_weighted_choice(seq, weight_func):
-    n = len(seq)
-    added_weights = 0
-    weights = []
-
-    for item in seq:
-        extra_weight = weight_func(item)
-        added_weights += extra_weight
-        weights.append(1 + (extra_weight + (extra_weight/float(n - 1))))
-
-    for w in range(n):
-        weights[w] -= (added_weights/float(n - 1))
-        weights[w] = max(weights[w], 0)
-
-    pick = random.random() * n
-
-    start = 0
-    for w in range(n):
-        end = start + weights[w]
-
-        if start <= pick and pick <= end:
-            break
-
-        start = end
-
-    return w

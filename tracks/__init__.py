@@ -1,4 +1,5 @@
 import settings
+import datetime
 import os
 import json
 import argparse
@@ -6,14 +7,21 @@ from utils import PersistedDict
 import eyed3
 import kaa.metadata
 
+
 SUPPORTED_FILE_TYPES = ['wma', 'm4a', 'mp3', 'mp4']
 
-class ID3Exception(Exception): pass
-class LoadException(Exception): pass
+class ID3Exception(Exception):
+    pass
 
-def find_files(path, types=SUPPORTED_FILE_TYPES):
+class LoadException(Exception):
+    pass
+
+def find_files(path, types=None):
+    if types is None:
+        types = []
+
     found = []
-    for root, dirs, files in os.walk(os.path.expanduser(path)):
+    for root, _, files in os.walk(os.path.expanduser(path)):
         for f in files:
             if any(f.lower().endswith('.' + ext) for ext in types):
                 found.append(root + '/' + f)
@@ -52,10 +60,37 @@ def _attempt_kaa_load(file_path):
         return {
             'artist': id3_info.artist,
             'title': id3_info.title,
+            #TODO album??
             'duration': int(id3_info.length),
         }
     except Exception, e:
         pass
+
+def get_track_info(path):
+    try:
+        tracks_file = find_tracks_file(path)
+    except Exception, e:
+        tracks_file = None
+        print e
+
+    if tracks_file:
+        db = PersistedDict(tracks_file)
+        for track_info in db.values():
+            yield track_info
+
+def find_tracks_file(path):
+    path = os.path.abspath(os.path.expanduser(path))
+
+    for file_name in os.listdir(path):
+        if file_name == '.tracks':
+            return os.path.join(path, '.tracks')
+
+    parent_path = os.path.abspath(os.path.join(path, os.pardir))
+    if parent_path == path:
+        # Reach the root
+        raise Exception("No .tracks file found")
+    else:
+        return find_tracks_file(parent_path)
 
 def get_track_key(json_data):
     if not (json_data.get('artist') and json_data.get('title')):
@@ -69,12 +104,14 @@ def display_track(json_data):
     else:
         return "%s" % json_data['file_path']
 
-def update_from_path(path, overwrite=False, verbose=False):
+def update_from_path(path, overwrite=False, verbose=False, types=None):
     db = PersistedDict(os.path.join(path, '.tracks'), overwrite=overwrite)
     not_seen = set(db.keys())
     track_info_added = {}
     failures = []
-    for file_path in find_files(path):
+
+    date_added = datetime.datetime.now().strftime(settings.DATE_FORMAT)
+    for file_path in find_files(path, types=types):
         escaped_file_path = json.loads(json.dumps(file_path))
 
         if escaped_file_path in db:
@@ -91,7 +128,8 @@ def update_from_path(path, overwrite=False, verbose=False):
 
             track_info = {
                 'file_path': escaped_file_path,
-                'pk': escaped_file_path
+                'pk': escaped_file_path,
+                'date_added': date_added,
             }
             track_info.update(id3_info)
 

@@ -1,5 +1,6 @@
 from __future__ import with_statement
 
+import datetime
 import json
 import random
 import os
@@ -7,8 +8,8 @@ import argparse
 import settings
 import wrappers
 
-from tracks import display_track
-from utils import MultiThreadObject, PersistedDict, find_tracks_file
+from tracks import display_track, find_tracks_file
+from utils import MultiThreadObject, PersistedDict
 
 class SmartPlayer(MultiThreadObject):
     UP_VOTE = 1
@@ -50,16 +51,24 @@ class SmartPlayer(MultiThreadObject):
         self.paused = False
         self.accepted = {}
         self.undecided = {}
-        self.dislike = {}
+        self.excluded = {}
         self.playlist = []
         self.playlist_position = -1
         self.search_results = []
 
         for track_info in self.track_db.values():
             tracks = self.accepted if track_info.get('rating', 0) >= accepted_threshold else self.undecided
+            groups = track_info.get('groups', [])
+            if any(exclusion in groups for exclusion in settings.EXCLUDED_SHUFFLE_GROUPS):
+                tracks = self.excluded
+
             tracks[track_info['pk']] = track_info
 
-        self.next()
+        if self.accepted:
+            self.next()
+        else:
+            print "No acceptable tracks found"
+            self.stop()
 
     def check_for_vote(self, stopped_playing=False):
         '''
@@ -171,7 +180,9 @@ class SmartPlayer(MultiThreadObject):
         self.skip()
 
     def skip(self):
+        skipped_track = self.current_track
         self.play(self.NEXT, skip=True)
+        self.incr_skip_count(skipped_track)
 
     def next(self):
         self.play(self.NEXT)
@@ -212,16 +223,16 @@ class SmartPlayer(MultiThreadObject):
         self.search_results = remaining_candidates
 
         for i, track in enumerate(self.search_results):
-            self.log("%d. %s" % (i + 1, display_track(track)))
+            print "%d. %s" % (i + 1, display_track(track))
 
     def play_search_result(self, number):
         if len(self.search_results) >= number:
             self.play_track(self.search_results[number - 1])
         else:
-            self.log("Invalid search result index: %d" % number)
+            print "Invalid search result index: %d" % number
 
     def stop(self):
-        self.log("Closing...")
+        print "Closing..."
         self.wrapped_player.close()
 
     def tick(self):
@@ -230,13 +241,24 @@ class SmartPlayer(MultiThreadObject):
         # Need to distinguish between pausing the the underlying player
         # and a user pausing the script
         if not self.paused and self.wrapped_player.stopped:
+            finished_track = self.current_track
             self.next()
+            self.incr_listen_count(finished_track)
+
+    def incr_listen_count(self, track):
+        track['listen_count'] = track.get('listen_count', 0) + 1
+        track['date_played'] = datetime.datetime.now().strftime(settings.DATE_FORMAT)
+        self.track_db.save()
+
+    def incr_skip_count(self, track):
+        track['skip_count'] = track.get('skip_count', 0) + 1
+        self.track_db.save()
 
     def set_current_track(self, track):
         self.voted_on_current_track = False
         self._current_track = track
         self.wrapped_player.play(os.path.join(self.root_path, track['file_path']))
-        self.log("Now Playing: %s" % display_track(track))
+        print "Now Playing: %s" % display_track(track)
 
     def get_current_track(self):
         return self._current_track

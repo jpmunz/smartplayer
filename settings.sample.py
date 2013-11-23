@@ -4,7 +4,8 @@ MUSIC_PATH = '/home/jon/Music/iTunes/'
 ID3_DB_FILE = '/home/jon/code/smartplayer/.id3_db'
 DB_FILE = '/home/jon/Dropbox/.tracks'
 
-ID3_TAGS = ['artist', 'album', 'title']
+ID3_TAGS_TO_REPORT_MISSING = ['artist', 'album', 'title']
+FILE_TYPES_TO_LOAD = ['wma', 'm4a', 'mp3', 'mp4']
 
 ACCEPTED_THRESHOLD = 100
 
