@@ -1,9 +1,9 @@
 #!/home/jon/code/smartplayer/env/bin/python
 import argparse
-from tracks import update_from_path
-import reporting
-import settings
-import players
+from smartplayer.tracks import update_from_path
+from smartplayer import reporting
+from smartplayer import settings
+from smartplayer import players
 
 REPORT_BY_TYPES = ['rating', 'listen_count', 'skip_count', 'date_added', 'date_played']
 

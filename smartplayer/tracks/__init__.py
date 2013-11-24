@@ -1,12 +1,12 @@
-import settings
 import datetime
 import os
 import json
 import argparse
-from utils import PersistedDict
 import eyed3
 import kaa.metadata
 
+from smartplayer.utils import PersistedDict
+from smartplayer import settings
 
 SUPPORTED_FILE_TYPES = ['wma', 'm4a', 'mp3', 'mp4']
 
@@ -29,8 +29,6 @@ def find_files(path, types=None):
     return found
 
 def load_id3_information(file_path):
-    failures = []
-
     for method in (_attempt_eyed3_load, _attempt_kaa_load):
         data = method(file_path)
         if data:
@@ -50,7 +48,7 @@ def _attempt_eyed3_load(file_path):
             'title': id3_info.tag.title,
             'duration': id3_info.info.time_secs,
         }
-    except Exception, e:
+    except:
         pass
 
 def _attempt_kaa_load(file_path):
@@ -63,7 +61,7 @@ def _attempt_kaa_load(file_path):
             #TODO album??
             'duration': int(id3_info.length),
         }
-    except Exception, e:
+    except:
         pass
 
 def get_track_info(path):
@@ -120,11 +118,7 @@ def update_from_path(path, overwrite=False, verbose=False, types=None):
             if verbose:
                 print "Attempting to add new file: '%s':" % escaped_file_path
 
-            try:
-                id3_info = load_id3_information(file_path)
-            except ID3Exception, e:
-                raise e
-                failures.append(e)
+            id3_info = load_id3_information(file_path)
 
             track_info = {
                 'file_path': escaped_file_path,

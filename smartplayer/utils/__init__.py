@@ -45,23 +45,24 @@ class MultiThreadObject(object):
     PROMPT = ""
     COMMANDS = {}
     STOP_COMMAND = 'q'
+    DIGIT_COMMAND = ''
 
     def __init__(self):
         self.main_thread_event = Event()
         self.main_thread_command = None
         self.main_thread_args = []
         self.stopped = False
+        self.input_thread = Thread(target=self.check_for_input)
 
-    def start(self):
         def wrapper():
             self.__tick__()
             self.tick_timer = Timer(self.TICK_INTERVAL, wrapper)
             self.tick_timer.start()
 
         self.tick_timer = Timer(self.TICK_INTERVAL, wrapper)
-        self.tick_timer.start()
 
-        self.input_thread = Thread(target=self.check_for_input)
+    def start(self):
+        self.tick_timer.start()
         self.input_thread.start()
 
         while True:
@@ -78,6 +79,9 @@ class MultiThreadObject(object):
         self.tick_timer.cancel()
 
         self.stop()
+
+    def stop(self):
+        raise NotImplementedError()
 
     def check_for_input(self):
         while True:
@@ -113,4 +117,4 @@ class MultiThreadObject(object):
         self.execute_on_main_thread(self.tick)
 
     def tick(self):
-        raise NotImplemented()
+        raise NotImplementedError()

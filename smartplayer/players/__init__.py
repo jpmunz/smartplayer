@@ -5,11 +5,12 @@ import json
 import random
 import os
 import argparse
-import settings
-import wrappers
 
-from tracks import display_track, find_tracks_file
-from utils import MultiThreadObject, PersistedDict
+from smartplayer import settings
+from smartplayer.tracks import display_track, find_tracks_file
+from smartplayer.utils import MultiThreadObject, PersistedDict
+
+from . import wrappers
 
 class SmartPlayer(MultiThreadObject):
     UP_VOTE = 1
@@ -72,9 +73,8 @@ class SmartPlayer(MultiThreadObject):
 
     def check_for_vote(self, stopped_playing=False):
         '''
-        Looks at how far into the current track we are. 
-        
-        Up vote it if we've listened to enough of it to qualify. Otherwise if the song 
+        Looks at how far into the current track we are.
+        Up vote it if we've listened to enough of it to qualify. Otherwise if the song
         stopped playing and we played it long enough to not consider it a skip we
         need to down vote it.
         '''

@@ -1,8 +1,8 @@
-import settings
 import datetime
 import os
-from tracks import get_track_key, get_track_info, display_track
-from utils import PersistedDict
+from smartplayer import settings
+from smartplayer.tracks import get_track_key, get_track_info, display_track
+from smartplayer.utils import PersistedDict
 
 MIN_DATE = datetime.datetime(1900, 1, 1).strftime(settings.DATE_FORMAT)
 
